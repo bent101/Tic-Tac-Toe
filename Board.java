@@ -46,17 +46,27 @@ public class Board {
 			
 			// print horizontal line unless its the last row
 			if(r < size-1) {
-				for(int i = 0; i < 4 * size - 1; i++)
-					System.out.print("-");
+				for(int i = 0; i < size - 1; i++)
+					System.out.print("---+");
+				System.out.print("---");
 			}
 			System.out.println();
 		}
 	}
 	
 	public char getWinner() {
+		int numTurnsTaken = 0;
+		for(char[] row : board) for(char c : row)
+			if(c != ' ') numTurnsTaken++;
+		
+		// no one can have won if they didn't take enough turns
+		if(numTurnsTaken <= 2 * (size-1)) return ' ';
+		
+		boolean isWin = true;
+		
 		// check rows
 		for(int r = 0; r < size; r++) {
-			boolean isWin = true;
+			isWin = true;
 			for(int c = 1; c < size && isWin; c++)
 				if(board[r][c] != board[r][0]) isWin = false;
 			if(isWin) return board[r][0];
@@ -64,7 +74,7 @@ public class Board {
 		
 		// check columns
 		for(int c = 0; c < size; c++) {
-			boolean isWin = true;
+			isWin = true;
 			for(int r = 1; r < size && isWin; r++)
 				if(board[r][c] != board[0][c]) isWin = false;
 			if(isWin) return board[0][c];
@@ -73,7 +83,7 @@ public class Board {
 		// check diagonals
 		
 		// top-left to bottom-right
-		boolean isWin = true;
+		isWin = true;
 		for(int i = 0; i < size && isWin; i++)
 			if(board[i][i] != board[0][0]) isWin = false;
 		if(isWin) return board[0][0];
@@ -81,7 +91,7 @@ public class Board {
 		// top-right to bottom-left
 		isWin = true;
 		for(int i = 0; i < size && isWin; i++)
-			if(board[i][size-1-i] != board[i][size-1]) isWin = false;
+			if(board[i][size-1-i] != board[0][size-1]) isWin = false;
 		if(isWin) return board[0][size-1];
 		
 		return ' '; // nobody has won yet (the method might also return blank as the "winner")
@@ -98,4 +108,53 @@ public class Board {
 			if(c ==  ' ') return false;
 		return true;
 	}
+	
+	public double getStaticEval(int depth) {
+		char winner = getWinner();
+		if(winner == 'O') return 1; // O maximizes
+		if(winner == 'X') return -1; // X minimizes
+		if(isFull() || depth == 4) return 0;
+		
+		double sum = 0;
+		int count = 0;
+		for(int r = 0; r < size; r++) {
+			for(int c = 0; c < size; c++) {
+				if(board[r][c] == ' ') {
+					board[r][c] = turn;
+					turn = turn == 'X' ? 'O' : 'X';
+					// print();
+					count++;
+					sum += getStaticEval(depth+1);
+					turn = turn == 'X' ? 'O' : 'X';
+					board[r][c] = ' ';
+				}
+			}
+		}
+		return sum / count;
+	}
+	
+	public double getStaticEval() {
+		return getStaticEval(0);
+	}
+	
+	public void makeOptimalMove() {
+		int bestR = -1, bestC = -1;
+		double best = turn == 'X' ? 2 : -2;
+		for(int r = 0; r < size; r++) {
+			for(int c = 0; c < size; c++) {
+				if(board[r][c] != ' ') continue;
+				board[r][c] = turn;
+				double staticEval = getStaticEval();
+				board[r][c] = ' ';
+				boolean isBetter = turn == 'X' ? staticEval < best : staticEval > best;
+				if(isBetter) {
+					best = staticEval;
+					bestR = r;
+					bestC = c;
+				}
+			}
+		}
+		takeTurn(bestR, bestC);
+	}
+	
 }
