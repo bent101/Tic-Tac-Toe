@@ -4,13 +4,18 @@ import java.util.Scanner;
 
 public class TextBasedTicTacToe {
 	public static void main(String[] args) {
-		Board board = new Board();
+		Board board = new Board(Game.boardSize);
 		
 		Scanner in = new Scanner(System.in);
 		
 		char winner = ' ';
 		
 		System.out.println("======= Welcome to Tic Tac Toe! ========");
+		
+		if(Game.isSingleplayer && Game.aiGoesFirst) {
+			board.takeTurn(board.getOptimalMove());
+		}
+		
 		board.print();
 		
 		while((winner = board.getWinner()) == ' ' && !board.isFull()) {
@@ -27,6 +32,15 @@ public class TextBasedTicTacToe {
 			}
 			
 			board.takeTurn(r, c);
+			
+			// AI goes after you if it's singleplayer
+			if(Game.isSingleplayer) {
+				Move aiMove = board.getOptimalMove();
+				if(board.isValidMove(aiMove))
+					board.takeTurn(aiMove);
+				else
+					System.out.println("The AI tried to make an invalid move!");
+			}
 			
 			board.print();
 		}
