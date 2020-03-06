@@ -6,12 +6,27 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
-import javafx.stage.Stage;
 import javafx.scene.shape.Line;
-
+import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.StrokeLineCap;
+import javafx.stage.Stage;
+import javafx.scene.shape.Ellipse;
 
 public class GraphicalTicTacToe extends Application {
+	
+	private int
+		windowWidth = 1300,
+		windowHeight = 800,
+		margin = 50,
+		strokeThickness,
+		boardSize;
+	private double 
+		tileSize,
+		tileInsetFactor;
+	
+	private final Color
+		xColor = Color.rgb(255, 130, 50),
+		oColor = Color.rgb(50, 130, 255);
 	
 	public static void main(String[] args) {
 		Application.launch(args);
@@ -21,48 +36,76 @@ public class GraphicalTicTacToe extends Application {
 	public void start(Stage primaryStage) throws Exception {
 		
 		Group root = new Group();
-		Scene scene = new Scene(root, 1300, 800);
+		root.setLayoutX(margin);
+		root.setLayoutY(margin);
+		Scene scene = new Scene(root, windowWidth, windowHeight);
 		
-		Board board = new Board();
+		Board board = new Board(Game.boardSize);
 		
-		final int
-			strokeThickness = 30 / (board.getSize() - 1),
-			boardWidth = 600,
-			boardHeight = 600,
-			boardOffsetX = 100,
-			boardOffsetY = 100;
-		final double
-			tileWidth = (double) boardWidth / board.getSize(),
-			tileHeight = (double) boardHeight / board.getSize();
+		// constants
+		strokeThickness = 30 / (board.getSize() - 1);
+		boardSize = 600;
+		tileSize = (double) boardSize / board.getSize();
+		tileInsetFactor = 0.7; // the X's and O's don't take up the entire square
 		
 		Rectangle background = new Rectangle(1300, 800, Color.rgb(0, 20, 40));
+		background.setTranslateX(-50);
+		background.setTranslateY(-50);
 		
-		Rectangle boardFrame = new Rectangle(50, 50, 700, 700);
+		Rectangle boardFrame = new Rectangle(
+				0, 0, boardSize + 2 * margin, boardSize + 2 * margin);
 		boardFrame.setFill(Color.rgb(30, 60, 90));
 		boardFrame.setArcWidth(40);
 		boardFrame.setArcHeight(40);
 		
-		Rectangle infoFrame = new Rectangle(800, 50, 450, 700);
+		Rectangle infoFrame = new Rectangle(
+				boardSize + 3 * margin,
+				0,
+				windowWidth - boardSize - 5 * margin,
+				windowHeight - 2 * margin);
 		infoFrame.setFill(Color.rgb(30, 60, 90));
 		infoFrame.setArcWidth(40);
 		infoFrame.setArcHeight(40);
 		
 		Group boardNode = new Group();
-		boardNode.setLayoutX(boardOffsetX);
-		boardNode.setLayoutY(boardOffsetY);
+		boardNode.setLayoutX(margin);
+		boardNode.setLayoutY(margin);
 		
-		for(double i = tileWidth; i < boardWidth; i += tileWidth) {
-			Line hLine = new Line(0, i, boardWidth, i);
-			hLine.setStrokeWidth(strokeThickness);
-			hLine.setStroke(Color.rgb(200, 230, 250));
-			
-			Line vLine = new Line(i, 0, i, boardHeight);
+		Group infoNode = new Group();
+		infoNode.setLayoutX(infoFrame.getX() + margin);
+		infoNode.setLayoutY(infoFrame.getY() + margin);
+		
+		// draws grid
+		for(double i = tileSize; i < boardSize; i += tileSize) {
+			Line vLine = new Line(i, 0, i, boardSize);
 			vLine.setStrokeWidth(strokeThickness);
 			vLine.setStroke(Color.rgb(200, 230, 250));
+			vLine.setStrokeLineCap(StrokeLineCap.ROUND);
 			
-			boardNode.getChildren().addAll(hLine, vLine);
+			boardNode.getChildren().add(vLine);
+		}
+		for(double i = tileSize; i < boardSize; i += tileSize) {
+			Line hLine = new Line(0, i, boardSize, i);
+			hLine.setStrokeWidth(strokeThickness);
+			hLine.setStroke(Color.rgb(200, 230, 250));
+			hLine.setStrokeLineCap(StrokeLineCap.ROUND);
+			
+			boardNode.getChildren().add(hLine);
 		}
 		
+		root.getChildren().addAll(background, boardFrame, infoFrame, boardNode);
+		
+		// AI goes if it's singleplayer and AI goes first
+		if(Game.isSingleplayer && Game.aiGoesFirst) {
+			Move aiMove = board.getOptimalMove();
+			
+			Group symbol = board.getTurn() == 'X' ? getXNode() : getONode();
+			symbol.setLayoutX(tileSize * aiMove.c + tileSize / 2);
+			symbol.setLayoutY(tileSize * aiMove.r + tileSize / 2);
+			boardNode.getChildren().add(symbol);
+			
+			board.takeTurn(aiMove);
+		}
 		
 		scene.setOnMousePressed(new EventHandler<MouseEvent>() {
 			@Override
@@ -70,22 +113,72 @@ public class GraphicalTicTacToe extends Application {
 				int mouseX = (int) event.getX();
 				int mouseY = (int) event.getY();
 
-				int colClicked = (mouseX - boardOffsetX) / (int) tileWidth;
-				int rowClicked = (mouseY - boardOffsetY) / (int) tileHeight;
+				int colClicked = (mouseX - 2 * margin) / (int) tileSize;
+				int rowClicked = (mouseY - 2 * margin) / (int) tileSize;
 				
 				colClicked = Math.min(colClicked, board.getSize()-1);
 				rowClicked = Math.min(rowClicked, board.getSize()-1);
 				
-				System.out.println(rowClicked + " " + colClicked);
+				if(!board.isValidMove(rowClicked, colClicked))
+					return;
+				
+				Group symbol = board.getTurn() == 'X' ? getXNode() : getONode();
+				symbol.setLayoutX(tileSize * colClicked + tileSize / 2);
+				symbol.setLayoutY(tileSize * rowClicked + tileSize / 2);
+				boardNode.getChildren().add(symbol);
+				
+				board.takeTurn(rowClicked, colClicked);
+				
+				// AI goes after you go if it's singleplayer
+				if(Game.isSingleplayer) {
+					Move aiMove = board.getOptimalMove();
+					
+					if(!board.isValidMove(aiMove))
+						return;
+					
+					Group symbol2 = board.getTurn() == 'X' ? getXNode() : getONode();
+					symbol2.setLayoutX(tileSize * aiMove.c + tileSize / 2);
+					symbol2.setLayoutY(tileSize * aiMove.r + tileSize / 2);
+					boardNode.getChildren().add(symbol2);
+					
+					board.takeTurn(aiMove);
+				}
+				
 			}
 		});
-		
-		
-		root.getChildren().addAll(background, boardFrame, infoFrame, boardNode);
 		
 		// display scene
 		primaryStage.setScene(scene);
 		primaryStage.show();
+	}
+	
+	private Group getXNode() {
+		Line line1 = new Line(
+				tileInsetFactor * tileSize / -2, tileInsetFactor * tileSize / -2,
+				tileInsetFactor * tileSize / 2, tileInsetFactor * tileSize / 2);
+		line1.setStrokeWidth(strokeThickness);
+		line1.setStroke(xColor);
+		line1.setStrokeLineCap(StrokeLineCap.ROUND);
+		
+		Line line2 = new Line(
+				tileInsetFactor * tileSize / 2, tileInsetFactor * tileSize / -2,
+				tileInsetFactor * tileSize / -2, tileInsetFactor * tileSize / 2);
+		line2.setStrokeWidth(strokeThickness);
+		line2.setStroke(xColor);
+		line2.setStrokeLineCap(StrokeLineCap.ROUND);
+		
+		return new Group(line1, line2);
+	}
+	
+	private Group getONode() {
+		Ellipse ellipse = new Ellipse(
+				tileInsetFactor * tileSize / 2,
+				tileInsetFactor * tileSize / 2);
+		ellipse.setStrokeWidth(strokeThickness);
+		ellipse.setStroke(oColor);
+		ellipse.setFill(Color.TRANSPARENT);
+		
+		return new Group(ellipse);
 	}
 	
 }
