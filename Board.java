@@ -11,11 +11,7 @@ public class Board {
 		this.size = size;
 		board = new char[size][size];
 		for(char[] row : board) Arrays.fill(row, ' ');
-		turn = 'X';
-	}
-	
-	public Board() {
-		this(3);
+		turn = Game.firstPlayer;
 	}
 	
 	public char getTurn() {
@@ -33,6 +29,10 @@ public class Board {
 	public void takeTurn(int r, int c) {
 		board[r][c] = turn;
 		turn = turn == 'X' ? 'O' : 'X';
+	}
+	
+	public void takeTurn(Move move) {
+		takeTurn(move.r, move.c);
 	}
 	
 	public void print() {
@@ -103,6 +103,10 @@ public class Board {
 				board[r][c] == ' ';
 	}
 	
+	public boolean isValidMove(Move move) {
+		return isValidMove(move.r, move.c);
+	}
+	
 	public boolean isFull() {
 		for(char[] row : board) for(char c : row)
 			if(c ==  ' ') return false;
@@ -113,7 +117,7 @@ public class Board {
 		char winner = getWinner();
 		if(winner == 'O') return 1; // O maximizes
 		if(winner == 'X') return -1; // X minimizes
-		if(isFull() || depth == 4) return 0;
+		if(isFull() || depth == Game.getAISearchDepth()) return 0;
 		
 		double sum = 0;
 		int count = 0;
@@ -137,7 +141,7 @@ public class Board {
 		return getStaticEval(0);
 	}
 	
-	public void makeOptimalMove() {
+	public Move getOptimalMove() {
 		int bestR = -1, bestC = -1;
 		double best = turn == 'X' ? 2 : -2;
 		for(int r = 0; r < size; r++) {
@@ -154,7 +158,8 @@ public class Board {
 				}
 			}
 		}
-		takeTurn(bestR, bestC);
+		
+		return new Move(bestR, bestC);
 	}
 	
 }
