@@ -11,7 +11,6 @@ import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.stage.Stage;
-import javafx.stage.StageStyle;
 
 public class GraphicalTicTacToe extends Application {
 	
@@ -25,9 +24,15 @@ public class GraphicalTicTacToe extends Application {
 		tileInsetFactor,
 		strokeThickness;
 	
+	private boolean gameIsOver = false;
+	
 	private final Color
 		xColor = Color.rgb(255, 130, 50),
-		oColor = Color.rgb(50, 130, 255);
+		oColor = Color.rgb(50, 130, 255),
+		xLightColor = Color.rgb(255, 200, 150),
+		oLightColor = Color.rgb(150, 200, 255);
+	
+	private Board board;
 	
 	public static void main(String[] args) {
 		Application.launch(args);
@@ -41,7 +46,7 @@ public class GraphicalTicTacToe extends Application {
 		root.setLayoutY(margin);
 		Scene scene = new Scene(root, windowWidth, windowHeight);
 		
-		Board board = new Board(Game.boardSize);
+		board = new Board(Game.boardSize);
 		
 		// constants
 		strokeThickness = 30.0 / (board.getSize() - 1);
@@ -111,6 +116,8 @@ public class GraphicalTicTacToe extends Application {
 		scene.setOnMousePressed(new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent event) {
+				if(gameIsOver) return;
+				
 				int mouseX = (int) event.getX();
 				int mouseY = (int) event.getY();
 
@@ -130,6 +137,12 @@ public class GraphicalTicTacToe extends Application {
 				
 				board.takeTurn(rowClicked, colClicked);
 				
+				if(board.getWinner() != ' ') {
+					boardNode.getChildren().add(getWinLine());
+					gameIsOver = true;
+					return;
+				}
+				
 				// AI goes after you go if it's singleplayer
 				if(Game.isSingleplayer) {
 					Move aiMove = board.getOptimalMove();
@@ -143,6 +156,12 @@ public class GraphicalTicTacToe extends Application {
 					boardNode.getChildren().add(symbol2);
 					
 					board.takeTurn(aiMove);
+					
+					if(board.getWinner() != ' ') {
+						boardNode.getChildren().add(getWinLine());
+						gameIsOver = true;
+						return;
+					}
 				}
 			}
 		});
@@ -180,6 +199,33 @@ public class GraphicalTicTacToe extends Application {
 		ellipse.setFill(Color.TRANSPARENT);
 		
 		return new Group(ellipse);
+	}
+	
+	private Line getWinLine() {
+		Move[] lineStartEnd = board.getWinLineStartEnd();
+		Coordinate
+			start = getTileCenter(lineStartEnd[0]),
+			end = getTileCenter(lineStartEnd[1]);
+		
+		Line winLine = new Line(start.x, start.y, end.x, end.y);
+		winLine.setStrokeWidth(strokeThickness);
+		winLine.setStroke(board.getWinner() == 'X' ? xLightColor : oLightColor);
+		winLine.setStrokeLineCap(StrokeLineCap.ROUND);
+		return winLine;
+		
+	}
+	
+	private Coordinate getTileCenter(Move move) {
+		return new Coordinate(
+				tileSize * move.c + tileSize / 2,
+				tileSize * move.r + tileSize / 2);
+	}
+	
+	class Coordinate {
+		public double x, y;
+		public Coordinate(double a, double b) {
+			x = a; y = b;
+		}
 	}
 	
 }
