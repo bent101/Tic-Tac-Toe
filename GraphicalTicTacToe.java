@@ -6,11 +6,12 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Ellipse;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.stage.Stage;
-import javafx.scene.shape.Ellipse;
+import javafx.stage.StageStyle;
 
 public class GraphicalTicTacToe extends Application {
 	
@@ -18,11 +19,11 @@ public class GraphicalTicTacToe extends Application {
 		windowWidth = 1300,
 		windowHeight = 800,
 		margin = 50,
-		strokeThickness,
 		boardSize;
 	private double 
 		tileSize,
-		tileInsetFactor;
+		tileInsetFactor,
+		strokeThickness;
 	
 	private final Color
 		xColor = Color.rgb(255, 130, 50),
@@ -43,7 +44,7 @@ public class GraphicalTicTacToe extends Application {
 		Board board = new Board(Game.boardSize);
 		
 		// constants
-		strokeThickness = 30 / (board.getSize() - 1);
+		strokeThickness = 30.0 / (board.getSize() - 1);
 		boardSize = 600;
 		tileSize = (double) boardSize / board.getSize();
 		tileInsetFactor = 0.7; // the X's and O's don't take up the entire square
@@ -143,12 +144,12 @@ public class GraphicalTicTacToe extends Application {
 					
 					board.takeTurn(aiMove);
 				}
-				
 			}
 		});
 		
 		// display scene
 		primaryStage.setScene(scene);
+		primaryStage.setTitle(Game.getTitle());
 		primaryStage.show();
 	}
 	
