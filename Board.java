@@ -14,6 +14,15 @@ public class Board {
 		turn = Game.firstPlayer;
 	}
 	
+	public Board(Board b) {
+		size = b.size;
+		board = new char[size][size];
+		for(int r = 0; r < size; r++)
+			for(int c = 0; c < size; c++)
+				board[r][c] = b.board[r][c];
+		turn = b.turn;
+	}
+	
 	public char getTurn() {
 		return turn;
 	}
@@ -117,7 +126,7 @@ public class Board {
 		char winner = getWinner();
 		if(winner == 'O') return 1; // O maximizes
 		if(winner == 'X') return -1; // X minimizes
-		if(isFull() || depth == Game.getAISearchDepth()) return 0;
+		if(isFull() || depth == 0) return 0;
 		
 		double sum = 0;
 		int count = 0;
@@ -126,19 +135,21 @@ public class Board {
 				if(board[r][c] == ' ') {
 					board[r][c] = turn;
 					turn = turn == 'X' ? 'O' : 'X';
-					// print();
-					count++;
-					sum += getStaticEval(depth+1);
+					double staticEval = getStaticEval(depth-1);
+					if(Double.compare(staticEval, 0) != 0) {
+						sum += staticEval;
+						count++;
+					}
 					turn = turn == 'X' ? 'O' : 'X';
 					board[r][c] = ' ';
 				}
 			}
 		}
-		return sum / count;
+		return count == 0 ? 0 : sum / count;
 	}
 	
 	public double getStaticEval() {
-		return getStaticEval(0);
+		return getStaticEval(Game.getAISearchDepth());
 	}
 	
 	public Move getOptimalMove() {
@@ -149,6 +160,7 @@ public class Board {
 				if(board[r][c] != ' ') continue;
 				board[r][c] = turn;
 				double staticEval = getStaticEval();
+				// System.out.println(staticEval);
 				board[r][c] = ' ';
 				boolean isBetter = turn == 'X' ? staticEval < best : staticEval > best;
 				if(isBetter) {
@@ -158,6 +170,7 @@ public class Board {
 				}
 			}
 		}
+		// System.out.println();
 		
 		return new Move(bestR, bestC);
 	}
