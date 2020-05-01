@@ -4,12 +4,12 @@ public class Game {
 	public static enum Difficulty {
 		EASY, MEDIUM, HARD, INSANE
 	}
-	public static int boardSize = 4;
-	public static boolean isSingleplayer = true;
+	public static int boardSize = 3;
+	public static boolean isSingleplayer = false;
 	public static boolean aiGoesFirst = false;
 	public static char firstPlayer = 'X';
 	
-	private static final Difficulty aiDifficulty = Difficulty.HARD;
+	private static final Difficulty aiDifficulty = Difficulty.INSANE;
 	
 	public static int getAISearchDepth() {
 		switch(aiDifficulty) {
@@ -32,7 +32,7 @@ public class Game {
 	}
 	
 	public static String getTitle() {
-		return "" + boardSize + " x " + boardSize + " " +
-				(isSingleplayer ? "Singleplayer" : "2 - Player") + " Tic Tac Toe";
+		return "" + boardSize + "x" + boardSize + " " +
+				(isSingleplayer ? "Singleplayer" : "Two Player") + " Tic Tac Toe";
 	}
 }
