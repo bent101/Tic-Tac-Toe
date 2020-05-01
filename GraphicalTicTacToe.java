@@ -15,7 +15,7 @@ import javafx.stage.Stage;
 public class GraphicalTicTacToe extends Application {
 	
 	private int
-		windowWidth = 1300,
+		windowWidth = 800,
 		windowHeight = 800,
 		margin = 50,
 		boardSize;
