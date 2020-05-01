@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 public class Board {
 	private int size;
+	private int numTurnsTaken;
 	private char[][] board;
 	private char turn;
 	
@@ -12,6 +13,7 @@ public class Board {
 		board = new char[size][size];
 		for(char[] row : board) Arrays.fill(row, ' ');
 		turn = Game.firstPlayer;
+		numTurnsTaken = 0;
 	}
 	
 	public Board(Board b) {
@@ -21,6 +23,8 @@ public class Board {
 			for(int c = 0; c < size; c++)
 				board[r][c] = b.board[r][c];
 		turn = b.turn;
+		numTurnsTaken = b.numTurnsTaken;
+		
 	}
 	
 	public char getTurn() {
@@ -42,6 +46,7 @@ public class Board {
 	
 	public void takeTurn(Move move) {
 		takeTurn(move.r, move.c);
+		numTurnsTaken++;
 	}
 	
 	public void print() {
@@ -64,12 +69,12 @@ public class Board {
 	}
 	
 	public char getWinner() {
-		int numTurnsTaken = 0;
+		int numMovesOnBoard = 0;
 		for(char[] row : board) for(char c : row)
-			if(c != ' ') numTurnsTaken++;
+			if(c != ' ') numMovesOnBoard++;
 		
 		// no one can have won if they didn't take enough turns
-		if(numTurnsTaken <= 2 * (size-1)) return ' ';
+		if(numMovesOnBoard < 2*size - 1) return ' ';
 		
 		boolean isWin = true;
 		
@@ -78,7 +83,7 @@ public class Board {
 			isWin = true;
 			for(int c = 1; c < size && isWin; c++)
 				if(board[r][c] != board[r][0]) isWin = false;
-			if(isWin) return board[r][0];
+			if(isWin && board[r][0] != ' ') return board[r][0];
 		}
 		
 		// check columns
@@ -86,24 +91,67 @@ public class Board {
 			isWin = true;
 			for(int r = 1; r < size && isWin; r++)
 				if(board[r][c] != board[0][c]) isWin = false;
-			if(isWin) return board[0][c];
+			if(isWin && board[0][c] != ' ') return board[0][c];
 		}
 		
 		// check diagonals
 		
 		// top-left to bottom-right
 		isWin = true;
-		for(int i = 0; i < size && isWin; i++)
+		for(int i = 1; i < size && isWin; i++)
 			if(board[i][i] != board[0][0]) isWin = false;
-		if(isWin) return board[0][0];
+		if(isWin && board[0][0] != ' ') return board[0][0];
 		
 		// top-right to bottom-left
 		isWin = true;
-		for(int i = 0; i < size && isWin; i++)
+		for(int i = 1; i < size && isWin; i++)
 			if(board[i][size-1-i] != board[0][size-1]) isWin = false;
-		if(isWin) return board[0][size-1];
+		if(isWin && board[0][size-1] != ' ') return board[0][size-1];
 		
-		return ' '; // nobody has won yet (the method might also return blank as the "winner" but its ok)
+		return ' '; // nobody has won yet
+	}
+	
+	public char getWinner(Move lastMove, int numMovesOnBoard) {
+		// no one can have won if they didnt take enough turns
+		if(numMovesOnBoard <= 2*size - 2) return ' ';
+		
+		char lastPlayer = board[lastMove.r][lastMove.c];
+		
+		// row
+		boolean isWin = true;
+		for(int c = 0; c < size && isWin; c++)
+			if(board[lastMove.r][c] != lastPlayer)
+				isWin = false;
+		if(isWin) return lastPlayer;
+		
+		// column
+		isWin = true;
+		for(int r = 0; r < size && isWin; r++)
+			if(board[r][lastMove.c] != lastPlayer)
+				isWin = false;
+		if(isWin) return lastPlayer;
+		
+		if(lastMove.r == lastMove.c) {
+			// top-left to bottom right
+			isWin = true;
+			for(int i = 0; i < size && isWin; i++) {
+				if(board[i][i] != lastPlayer)
+					isWin = false;
+			}
+			if(isWin) return lastPlayer;
+		}
+		
+		if(lastMove.r == size-1 - lastMove.c) {
+			// top-right to bottom-left
+			isWin = true;
+			for(int i = 0; i < size && isWin; i++) {
+				if(board[i][size-1-i] != lastPlayer)
+					isWin = false;
+			}
+			if(isWin) return lastPlayer;
+		}
+		
+		return ' '; // no one won
 	}
 	
 	public boolean isValidMove(int r, int c) {
@@ -122,11 +170,29 @@ public class Board {
 		return true;
 	}
 	
-	public double getStaticEval(int depth) {
-		char winner = getWinner();
+	public double getStaticEval(int depth, Move lastMove) {
+		int numMovesOnBoard = numTurnsTaken + Game.getAISearchDepth() - depth;
+		
+		char winner = getWinner(lastMove, numMovesOnBoard);
 		if(winner == 'O') return 1; // O maximizes
 		if(winner == 'X') return -1; // X minimizes
 		if(isFull() || depth == 0) return 0;
+		
+		if(Game.isSingleplayer) {
+			char aiTurn = Game.aiGoesFirst ^ (Game.firstPlayer == 'X') ? 'X' : 'O';
+			if(aiTurn == turn) {
+				// System.out.println("ai turn");
+				Move optimalMove = getOptimalMove();
+				board[optimalMove.r][optimalMove.c] = turn;
+				turn = turn == 'X' ? 'O' : 'X';
+				double staticEval = getStaticEval(depth-1, optimalMove);
+				turn = turn == 'X' ? 'O' : 'X';
+				board[optimalMove.r][optimalMove.c] = ' ';
+				return staticEval;
+			}
+		}
+		
+		// System.out.println("not ai turn");
 		
 		double sum = 0;
 		int count = 0;
@@ -135,7 +201,7 @@ public class Board {
 				if(board[r][c] == ' ') {
 					board[r][c] = turn;
 					turn = turn == 'X' ? 'O' : 'X';
-					double staticEval = getStaticEval(depth-1);
+					double staticEval = getStaticEval(depth-1, new Move(r, c));
 					sum += staticEval;
 					count++;
 					turn = turn == 'X' ? 'O' : 'X';
@@ -146,8 +212,8 @@ public class Board {
 		return count == 0 ? 0 : sum / count;
 	}
 	
-	public double getStaticEval() {
-		return getStaticEval(Game.getAISearchDepth());
+	public double getStaticEval(Move lastMove) {
+		return getStaticEval(Game.getAISearchDepth(), lastMove);
 	}
 	
 	public Move getOptimalMove() {
@@ -157,7 +223,7 @@ public class Board {
 			for(int c = 0; c < size; c++) {
 				if(board[r][c] != ' ') continue;
 				board[r][c] = turn;
-				double staticEval = getStaticEval();
+				double staticEval = getStaticEval(new Move(r, c));
 				// System.out.println(staticEval);
 				board[r][c] = ' ';
 				boolean isBetter = turn == 'X' ? staticEval < best : staticEval > best;
@@ -181,7 +247,7 @@ public class Board {
 			isWin = true;
 			for(int c = 1; c < size && isWin; c++)
 				if(board[r][c] != board[r][0]) isWin = false;
-			if(isWin)
+			if(isWin && board[r][0] != ' ')
 				return new Move[] { new Move(r, 0), new Move(r, size-1) };
 		}
 		
@@ -190,7 +256,7 @@ public class Board {
 			isWin = true;
 			for(int r = 1; r < size && isWin; r++)
 				if(board[r][c] != board[0][c]) isWin = false;
-			if(isWin)
+			if(isWin && board[0][c] != ' ')
 				return new Move[] { new Move(0, c), new Move(size-1, c) };
 		}
 		
@@ -198,9 +264,9 @@ public class Board {
 		
 		// top-left to bottom-right
 		isWin = true;
-		for(int i = 0; i < size && isWin; i++)
+		for(int i = 1; i < size && isWin; i++)
 			if(board[i][i] != board[0][0]) isWin = false;
-		if(isWin)
+		if(isWin && board[0][0] != ' ')
 			return new Move[] { new Move(0, 0), new Move(size-1, size-1) };
 		
 		// must be top-right to bottom-left; assume someone has won
